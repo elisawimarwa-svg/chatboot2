@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Chatbot IA - TP 5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Personnalisation de la barre de défilement */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .message-bubble {
+            max-width: 85%;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b p-4 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-2">
+            <div class="bg-blue-600 p-2 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800">Assistant IA <span class="text-sm font-normal text-slate-500 ml-2">(TP 5)</span></h1>
+        </div>
+    </header>
+
+    <!-- Zone de discussion -->
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        <!-- Message de bienvenue -->
+        <div class="flex justify-start">
+            <div class="message-bubble bg-white border border-slate-200 text-slate-700 p-3 rounded-2xl rounded-tl-none shadow-sm">
+                Bonjour ! Je suis votre assistant propulsé par OpenRouter. Comment puis-je vous aider aujourd'hui ?
+            </div>
+        </div>
+    </main>
+
+    <!-- Zone de saisie -->
+    <footer class="p-4 bg-white border-t">
+        <form id="chat-form" class="max-w-4xl mx-auto flex gap-2">
+            <input 
+                type="text" 
+                id="user-input" 
+                placeholder="Posez votre question ici..." 
+                class="flex-1 p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                required
+            >
+            <button 
+                type="submit" 
+                id="send-btn"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-medium transition-colors flex items-center justify-center min-w-[100px]"
+            >
+                Envoyer
+            </button>
+        </form>
+        <p class="text-center text-[10px] text-slate-400 mt-2 italic">
+            Note: Votre clé API est utilisée côté client pour ce TP.
+        </p>
+    </footer>
+
+    <script>
+        /**
+         * CONFIGURATION - TP 5
+         * Clé API intégrée pour le déploiement
+         */
+        const CONFIG = {
+            API_KEY: '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', 
+            MODEL: 'google/gemini-2.0-flash-lite-preview-02-05:free' 
+        };
+
+        const chatContainer = document.getElementById('chat-container');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function addMessage(text, isUser = false) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = isUser 
+                ? 'message-bubble bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none shadow-md'
+                : 'message-bubble bg-white border border-slate-200 text-slate-700 p-3 rounded-2xl rounded-tl-none shadow-sm';
+            
+            bubble.innerText = text;
+            wrapper.appendChild(bubble);
+            chatContainer.appendChild(wrapper);
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function fetchAIResponse(userPrompt) {
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${CONFIG.API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "model": CONFIG.MODEL,
+                        "messages": [
+                            {"role": "user", "content": userPrompt}
+                        ]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || "Erreur réseau");
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content;
+
+            } catch (error) {
+                console.error("Erreur API:", error);
+                return "Désolé, une erreur est survenue : " + error.message;
+            }
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            userInput.value = '';
+            
+            sendBtn.disabled = true;
+            sendBtn.innerText = '...';
+            sendBtn.classList.add('opacity-50');
+
+            const aiResponse = await fetchAIResponse(message);
+            addMessage(aiResponse, false);
+
+            sendBtn.disabled = false;
+            sendBtn.innerText = 'Envoyer';
+            sendBtn.classList.remove('opacity-50');
+        });
+    </script>
+</body>
+</html>
