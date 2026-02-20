@@ -108,7 +108,9 @@
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${CONFIG.API_KEY}`,
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": window.location.origin, // Requis par certains modèles OpenRouter
+                        "X-Title": "TP 5 Chatbot AI"           // Optionnel mais recommandé
                     },
                     body: JSON.stringify({
                         "model": CONFIG.MODEL,
@@ -118,16 +120,21 @@
                     })
                 });
 
+                const data = await response.json();
+
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error?.message || "Erreur réseau");
+                    // Si l'API renvoie une erreur spécifique (ex: quota dépassé)
+                    throw new Error(data.error?.message || `Erreur ${response.status}`);
                 }
 
-                const data = await response.json();
+                if (!data.choices || data.choices.length === 0) {
+                    throw new Error("Aucune réponse reçue du modèle.");
+                }
+
                 return data.choices[0].message.content;
 
             } catch (error) {
-                console.error("Erreur API:", error);
+                console.error("Détails de l'erreur:", error);
                 return "Désolé, une erreur est survenue : " + error.message;
             }
         }
@@ -135,21 +142,25 @@
         chatForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const message = userInput.value.trim();
-            if (!message) return;
+            if (!message || sendBtn.disabled) return;
 
+            // Ajouter le message utilisateur
             addMessage(message, true);
             userInput.value = '';
             
+            // État de chargement
             sendBtn.disabled = true;
-            sendBtn.innerText = '...';
-            sendBtn.classList.add('opacity-50');
+            sendBtn.innerText = 'Chargement...';
+            sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
+            // Appel API
             const aiResponse = await fetchAIResponse(message);
             addMessage(aiResponse, false);
 
+            // Rétablir le bouton
             sendBtn.disabled = false;
             sendBtn.innerText = 'Envoyer';
-            sendBtn.classList.remove('opacity-50');
+            sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         });
     </script>
 </body>
