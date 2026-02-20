@@ -26,7 +26,7 @@
 </head>
 <body class="bg-slate-50 h-screen flex flex-col">
 
-    <!-- Header -->
+    <!-- En-tête -->
     <header class="bg-white border-b p-4 flex justify-between items-center shadow-sm">
         <div class="flex items-center gap-2">
             <div class="bg-blue-600 p-2 rounded-lg">
@@ -109,8 +109,9 @@
                     headers: {
                         "Authorization": `Bearer ${CONFIG.API_KEY}`,
                         "Content-Type": "application/json",
-                        "HTTP-Referer": window.location.origin, // Requis par certains modèles OpenRouter
-                        "X-Title": "TP 5 Chatbot AI"           // Optionnel mais recommandé
+                        // Certains modèles gratuits exigent ces en-têtes pour fonctionner
+                        "HTTP-Referer": window.location.href, 
+                        "X-Title": "TP 5 AI Chatbot"
                     },
                     body: JSON.stringify({
                         "model": CONFIG.MODEL,
@@ -123,18 +124,19 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    // Si l'API renvoie une erreur spécifique (ex: quota dépassé)
-                    throw new Error(data.error?.message || `Erreur ${response.status}`);
+                    // Analyse plus précise de l'erreur renvoyée par OpenRouter
+                    const errorMsg = data.error?.message || `Erreur ${response.status}`;
+                    throw new Error(errorMsg);
                 }
 
                 if (!data.choices || data.choices.length === 0) {
-                    throw new Error("Aucune réponse reçue du modèle.");
+                    throw new Error("Le modèle n'a renvoyé aucune réponse.");
                 }
 
                 return data.choices[0].message.content;
 
             } catch (error) {
-                console.error("Détails de l'erreur:", error);
+                console.error("Détails de l'erreur API:", error);
                 return "Désolé, une erreur est survenue : " + error.message;
             }
         }
@@ -150,7 +152,7 @@
             
             // État de chargement
             sendBtn.disabled = true;
-            sendBtn.innerText = 'Chargement...';
+            sendBtn.innerText = 'En cours...';
             sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
             // Appel API
